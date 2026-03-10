@@ -10,3 +10,7 @@ nix flake init -t github:encodepanda/rustyjupyter
 nix develop
 jupyter lab
 ```
+
+## Example
+
+![Collatz conjecture in Jupyter](example.png)
