@@ -17,3 +17,7 @@ jupyter lab
 ```
 
 Select the **Rust (evcxr)** kernel when creating a new notebook.
+
+## Example
+
+![Collatz conjecture in Jupyter](example.png)
