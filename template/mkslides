@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+file="$1"
+theme="${2:-sky}"
+jupyter nbconvert "$file" --to slides --template highlight-reveal --SlidesExporter.reveal_theme="$theme" --SlidesExporter.reveal_scroll=true

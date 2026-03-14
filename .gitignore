@@ -1,4 +1,5 @@
-.jupyter/
+.jupyter/*
+!.jupyter/nbconvert/
 .local/
 __pycache__/
 *.pyc

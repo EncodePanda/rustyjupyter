@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""Manage highlight_lines metadata in Jupyter notebook cells.
+
+Usage:
+  ./highlight notebook.ipynb                     List all code cells
+  ./highlight notebook.ipynb 2 1,3-5,8            Highlight lines 1, 3, 4, 5, 8 in code cell #2
+  ./highlight notebook.ipynb 2 clear             Remove highlighting from code cell #2
+"""
+
+import json
+import sys
+
+def parse_lines(spec):
+    """Parse a line spec like '1,3-5,8,10' into [1, 3, 4, 5, 8, 10]."""
+    result = []
+    for part in spec.split(','):
+        part = part.strip()
+        if '-' in part:
+            start, end = part.split('-', 1)
+            result.extend(range(int(start), int(end) + 1))
+        else:
+            result.append(int(part))
+    return sorted(set(result))
+
+def load_notebook(path):
+    with open(path) as f:
+        return json.load(f)
+
+def save_notebook(path, nb):
+    with open(path, 'w') as f:
+        json.dump(nb, f, indent=1)
+        f.write('\n')
+
+def code_cells(nb):
+    """Return list of (global_index, cell) for code cells only."""
+    return [(i, c) for i, c in enumerate(nb['cells']) if c['cell_type'] == 'code']
+
+def list_cells(nb):
+    cells = code_cells(nb)
+    if not cells:
+        print("No code cells found.")
+        return
+
+    for code_idx, (global_idx, cell) in enumerate(cells):
+        src = ''.join(cell['source'])
+        hl = cell.get('metadata', {}).get('highlight_lines')
+        lines = src.split('\n')
+
+        # Header
+        hl_str = f"  hl={hl}" if hl else ""
+        print(f"--- code cell #{code_idx}{hl_str} ---")
+
+        # Source with line numbers, marking highlighted lines
+        for ln, line in enumerate(lines, 1):
+            marker = " >" if hl and ln in hl else "  "
+            print(f"  {marker} {ln:3d} | {line}")
+
+        print()
+
+def set_highlight(nb, code_idx, line_nums):
+    cells = code_cells(nb)
+    if code_idx < 0 or code_idx >= len(cells):
+        print(f"Error: code cell #{code_idx} does not exist (have {len(cells)} code cells)")
+        sys.exit(1)
+
+    _, cell = cells[code_idx]
+    src = ''.join(cell['source'])
+    total_lines = len(src.split('\n'))
+
+    bad = [l for l in line_nums if l < 1 or l > total_lines]
+    if bad:
+        print(f"Warning: lines {bad} are out of range (cell has {total_lines} lines)")
+
+    cell.setdefault('metadata', {})['highlight_lines'] = sorted(line_nums)
+    print(f"Set highlight_lines={sorted(line_nums)} on code cell #{code_idx}")
+
+def clear_highlight(nb, code_idx):
+    cells = code_cells(nb)
+    if code_idx < 0 or code_idx >= len(cells):
+        print(f"Error: code cell #{code_idx} does not exist (have {len(cells)} code cells)")
+        sys.exit(1)
+
+    _, cell = cells[code_idx]
+    if 'highlight_lines' in cell.get('metadata', {}):
+        del cell['metadata']['highlight_lines']
+    print(f"Cleared highlighting from code cell #{code_idx}")
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
+        print(__doc__.strip())
+        sys.exit(0)
+
+    path = sys.argv[1]
+    nb = load_notebook(path)
+
+    if len(sys.argv) == 2:
+        list_cells(nb)
+        return
+
+    code_idx = int(sys.argv[2])
+
+    if len(sys.argv) == 3:
+        # Show just this cell
+        cells = code_cells(nb)
+        if code_idx < 0 or code_idx >= len(cells):
+            print(f"Error: code cell #{code_idx} does not exist")
+            sys.exit(1)
+        # Temporarily filter to just this cell for display
+        _, cell = cells[code_idx]
+        src = ''.join(cell['source'])
+        hl = cell.get('metadata', {}).get('highlight_lines')
+        hl_str = f"  hl={hl}" if hl else ""
+        print(f"--- code cell #{code_idx}{hl_str} ---")
+        for ln, line in enumerate(src.split('\n'), 1):
+            marker = " >" if hl and ln in hl else "  "
+            print(f"  {marker} {ln:3d} | {line}")
+        return
+
+    arg = sys.argv[3]
+    if arg == 'clear':
+        clear_highlight(nb, code_idx)
+    else:
+        line_nums = parse_lines(arg)
+        set_highlight(nb, code_idx, line_nums)
+
+    save_notebook(path, nb)
+
+if __name__ == '__main__':
+    main()

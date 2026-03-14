@@ -1,0 +1,66 @@
+{%- extends 'reveal/index.html.j2' -%}
+
+{% block notebook_css %}
+{{ super() }}
+<style type="text/css">
+/* Line highlighting */
+.highlight pre .hll {
+    display: block;
+    background-color: rgba(255, 255, 0, 0.35) !important;
+    margin: 0 -0.4em;
+    padding: 0 0.4em;
+}
+</style>
+{% endblock notebook_css %}
+
+{% block footer_js %}
+{{ super() }}
+<script>
+// Line highlighting based on cell metadata "highlight_lines"
+window.addEventListener('DOMContentLoaded', function() {
+    var highlightMap = {
+    {%- for cell in nb.cells %}
+    {%- if cell.metadata.get('highlight_lines') %}
+        "{{ cell.id }}": [{{ cell.metadata.highlight_lines | join(', ') }}],
+    {%- endif %}
+    {%- endfor %}
+    };
+
+    Object.keys(highlightMap).forEach(function(cellId) {
+        var lines = highlightMap[cellId];
+        var cellEl = document.getElementById('cell-id=' + cellId);
+        if (!cellEl) {
+            console.warn('[highlight] cell not found: ' + cellId);
+            return;
+        }
+        var pre = cellEl.querySelector('.highlight pre');
+        if (!pre) {
+            console.warn('[highlight] pre not found in cell: ' + cellId);
+            return;
+        }
+
+        var html = pre.innerHTML;
+        // Strip Pygments' leading empty <span></span>
+        var prefix = '';
+        if (html.indexOf('<span></span>') === 0) {
+            prefix = '<span></span>';
+            html = html.substring('<span></span>'.length);
+        }
+
+        var htmlLines = html.split('\n');
+        var result = prefix;
+        for (var i = 0; i < htmlLines.length; i++) {
+            var lineNum = i + 1;
+            if (lines.indexOf(lineNum) !== -1) {
+                result += '<span class="hll">' + htmlLines[i] + '\n</span>';
+            } else {
+                result += htmlLines[i];
+                if (i < htmlLines.length - 1) result += '\n';
+            }
+        }
+        pre.innerHTML = result;
+        console.log('[highlight] highlighted lines ' + lines + ' in cell ' + cellId);
+    });
+});
+</script>
+{% endblock footer_js %}
