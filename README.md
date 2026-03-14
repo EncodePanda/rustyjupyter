@@ -13,4 +13,6 @@ jupyter lab
 
 ## Example
 
+See [rust-examples.ipynb](template/rust-examples.ipynb) for a sample notebook with Rust code.
+
 ![Collatz conjecture in Jupyter](example.png)
